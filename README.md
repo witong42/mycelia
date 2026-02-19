@@ -1,4 +1,4 @@
-# Mycelia
+# mycelia
 
 **A conversation-first personal knowledge base.**
 
