@@ -22,3 +22,7 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+#private notes
+LESSONS_LEARNED.md
+PROJECT_CONTEXT.md

@@ -1,112 +1,99 @@
 # Mycelia
 
-A conversation-first personal knowledge base. You talk — Mycelia organizes everything into structured markdown automatically.
+**A conversation-first personal knowledge base.**
 
-**mycelia.garden**
+Chat with an AI. A second AI automatically extracts what you said, organizes it, and writes it into an Obsidian-compatible markdown vault — with wikilinks, frontmatter, and folder structure intact.
+
+> **Prototype release.** This is an early version shared with the community. A polished desktop app with cloud sync is in development at [mycelia.garden](https://mycelia.garden).
 
 ---
 
-## What it is
+## What it does
 
-Most knowledge tools make organization the work. Mycelia inverts this. You have a conversation with an AI, and behind the scenes a second AI reads that conversation and extracts notes, journal entries, and connections into a local markdown vault — Obsidian-compatible, owned entirely by you.
+Most knowledge tools make organization the work. Mycelia inverts this. You have a conversation with an AI, and a second AI reads that conversation in the background — extracting notes, journal entries, and connections into a local markdown vault you own entirely.
 
 The interface is a chat window. The output is a structured knowledge base that grows every time you talk.
 
-## Features
+- **Automatic extraction** — Facts, ideas, decisions, and people are extracted after every message exchange and written to the correct folder (`topics/`, `people/`, `projects/`, `decisions/`, `ideas/`). Existing notes are appended to rather than overwritten.
+- **Daily journal** — Every session is summarized and appended to `journals/YYYY-MM-DD.md` with a timestamp.
+- **Knowledge graph** — Live force-directed visualization of your vault's wikilink connections. Nodes are color-coded by folder. Phantom nodes appear for links not yet resolved.
+- **Note browser + editor** — Browse your vault by folder, search by content (BM25 full-text), and edit notes with a WYSIWYG markdown editor (Tiptap).
+- **Backlinks** — Every note shows all other notes that link to it.
+- **RAG retrieval** — Ask "what did I decide about X?" or "remind me of my notes on Y" and Mycelia loads your vault as context.
+- **Obsidian-compatible** — All output is plain markdown with YAML frontmatter and `[[wikilinks]]`. Your vault works in Obsidian, iA Writer, or any markdown tool — with or without Mycelia.
+- **Local-first** — Your vault is a folder on your machine. No account required. Nothing leaves your device except direct API calls to Anthropic.
 
-- **Streaming chat** — Conversational interface powered by Claude (Opus, Sonnet, or Haiku — your choice). Responses stream in real time.
-- **Automatic knowledge extraction** — After each message exchange, a background AI call reads the conversation and extracts structured notes with YAML frontmatter and `[[wikilinks]]`. Notes are routed to the correct folder automatically (`topics/`, `people/`, `projects/`, `decisions/`, `ideas/`). Existing notes are appended to rather than overwritten.
-- **Daily journal** — Every exchange that contains something worth remembering is summarized and appended to `journals/YYYY-MM-DD.md` with a timestamp.
-- **Graph view** — Force-directed visualization of your vault's wikilink connections. Nodes are color-coded by folder. Phantom nodes appear for links that don't yet resolve to a file.
-- **RAG retrieval** — Pattern-matching detects retrieval questions ("what did I decide about...", "remind me of...", "find my notes on...") and loads vault context into the prompt so Claude can answer from your own knowledge base.
-- **Settings** — Configure API key, vault directory, conversation model, extraction model, and writing perspective (first or second person).
-- **Onboarding** — First-run wizard collects API key and vault directory before showing the main UI.
-- **Chat persistence** — Conversation history is saved to `.mycelia/chat.json` inside the vault directory and restored on launch.
-- **Obsidian compatibility** — All output is standard markdown. The vault folder layout, YAML frontmatter, and wikilink syntax are fully compatible with Obsidian.
+---
 
-## Tech stack
+## Screenshots
+
+![Mycelia screenshot 1](screenshots/Screenshot%202026-02-19%20at%2009.35.31.png)
+
+![Mycelia screenshot 2](screenshots/Screenshot%202026-02-19%20at%2010.49.37.png)
+
+![Mycelia screenshot 3](screenshots/Screenshot%202026-02-19%20at%2010.49.51.png)
+
+![Mycelia screenshot 4](screenshots/Screenshot%202026-02-19%20at%2010.50.02.png)
+
+![Mycelia screenshot 5](screenshots/Screenshot%202026-02-19%20at%2010.50.22.png)
+
+![Mycelia screenshot 6](screenshots/Screenshot%202026-02-19%20at%2010.50.31.png)
+
+---
+
+## Stack
 
 | Layer | Technology |
 |---|---|
 | Desktop shell | Tauri v2 (Rust) |
-| Frontend framework | SvelteKit + Svelte 5 |
-| Language | TypeScript |
+| Frontend | SvelteKit + Svelte 5 + TypeScript |
 | Styling | Tailwind CSS v4 |
-| AI | Anthropic Claude API (direct browser access) |
-| Graph | force-graph |
-| Settings persistence | tauri-plugin-store |
-| Filesystem | tauri-plugin-fs |
-| Directory picker | tauri-plugin-dialog |
+| AI | Anthropic Claude API (BYOK) |
+| Graph | Cytoscape.js + fcose layout |
+| Editor | Tiptap v3 |
+| Search | BM25 in-memory full-text index |
+| Persistence | tauri-plugin-store + tauri-plugin-fs |
+
+---
 
 ## Getting started
 
-You need an [Anthropic API key](https://console.anthropic.com/).
+### Prerequisites
 
-```sh
-# Install dependencies
+- [Bun](https://bun.sh) — package manager
+- [Rust](https://rustup.rs) — required by Tauri
+- An [Anthropic API key](https://console.anthropic.com)
+
+### Run in development
+
+```bash
+git clone https://github.com/your-username/mycelia
+cd mycelia
 bun install
-
-# Start the desktop app (development)
-bun run tauri dev
+bun tauri dev
 ```
 
-On first launch, Mycelia will walk you through entering your API key and selecting a vault directory. After that, just start talking.
+On first launch, the onboarding wizard asks for your Anthropic API key and a vault directory. Both are stored locally.
 
-### Build for distribution
+### Build
 
-```sh
-bun run tauri build
+```bash
+bun tauri build
 ```
+
+---
 
 ## Architecture
 
-```
-src/
-  lib/
-    ai/
-      claude.ts       — Claude API client: streaming chat + non-streaming extraction calls
-      extraction.ts   — Knowledge extraction engine: parses AI output into vault notes
-      rag.ts          — RAG retrieval: detects queries, stuffs vault context into prompt
-    vault/
-      filesystem.ts   — Tauri FS wrappers: read/write notes, list vault, persist chat history
-      graph.ts        — Graph builder: transforms vault files into nodes and links
-      journal.ts      — Daily journal writer: summarizes exchanges to journals/YYYY-MM-DD.md
-      parser.ts       — Markdown utilities: wikilink extraction, frontmatter parsing, slugify
-    stores/
-      chat.ts         — Message store: manages conversation state and persistence
-      settings.ts     — Settings store: persists config via tauri-plugin-store
-    components/
-      ChatInput.svelte    — Message input bar
-      ChatMessage.svelte  — Individual message bubble
-      GraphView.svelte    — force-graph canvas component
-      Onboarding.svelte   — First-run setup wizard
-      Sidebar.svelte      — Navigation (Chat / Graph / Settings)
-  routes/
-    +layout.svelte    — App shell: initializes settings, vault, and chat history on mount
-    +page.svelte      — Chat view: the main conversation screen
-    graph/
-      +page.svelte    — Graph view: loads vault and renders knowledge graph
-    settings/
-      +page.svelte    — Settings view: API key, model, vault, writing style
-
-src-tauri/
-  src/
-    lib.rs            — Tauri app builder: registers FS, dialog, store, and log plugins
-    main.rs           — Entry point
-  Cargo.toml          — Rust dependencies
-  capabilities/
-    default.json      — Tauri v2 capability grants (filesystem, dialog, store)
-```
-
 ### Data flow
 
-1. User sends a message in the chat view.
+1. User sends a message in chat.
 2. If the message matches a retrieval pattern, the full vault is read and injected into the system prompt.
 3. A streaming request goes directly to the Anthropic API.
 4. Once the response completes, two background tasks run in parallel:
    - `writeJournalEntry` — summarizes the exchange and appends to today's journal.
    - `extractKnowledge` — extracts structured notes and writes them to the vault.
-5. All vault output is plain markdown files in the user-selected directory.
+5. All output is plain markdown in the user-selected directory.
 
 ### Vault structure
 
@@ -122,14 +109,55 @@ src-tauri/
     chat.json       — Persisted conversation history
 ```
 
+### Source layout
+
+```
+src/lib/ai/         — Claude client, extraction engine, RAG
+src/lib/vault/      — Filesystem ops, graph builder, journal writer, markdown parser
+src/lib/stores/     — Svelte stores (chat, settings, notes)
+src/lib/search/     — BM25 full-text search index
+src/lib/components/ — UI components
+src/routes/         — SvelteKit pages (chat, graph, notes, daily, settings)
+src-tauri/src/      — Rust: Tauri plugin registration only
+```
+
+---
+
 ## Configuration
 
-All settings are stored locally via `tauri-plugin-store` and never leave the machine (except the API key, which goes only to Anthropic's API endpoint).
+All settings are stored locally and never leave the machine (except the API key, which goes only to Anthropic).
 
 | Setting | Default | Description |
 |---|---|---|
 | API Key | — | Anthropic API key |
 | Vault Path | — | Directory where markdown files are written |
-| Conversation Model | claude-sonnet-4-6 | Model used for chat |
-| Extraction Model | claude-haiku-4-5-20251001 | Model used for extraction and journals |
-| Writing Perspective | Second person | Whether notes say "You decided..." or "I decided..." |
+| Conversation Model | claude-sonnet-4-6 | Model used for chat responses |
+| Extraction Model | claude-haiku-4-5-20251001 | Model used for background extraction and journaling |
+| Writing Perspective | Second person | Whether notes say "You decided…" or "I decided…" |
+
+---
+
+## Prototype status
+
+This is a working prototype. Core features function but expect rough edges:
+
+- Full-text search is implemented but not yet wired to the search UI
+- No multi-conversation support (single thread only)
+- No local model / Ollama support yet
+- No auto-update
+
+The commercial version under development adds a polished UX, Ollama integration, cloud sync, multi-device access, and an MCP server so Claude.ai Desktop can access your vault natively.
+
+---
+
+## License
+
+[PolyForm Noncommercial 1.0.0](./LICENSE) — free to use, modify, and study for personal non-commercial purposes. See [LICENSE](./LICENSE) for full terms.
+
+---
+
+## Contributing
+
+Issues and discussion are welcome. Pull requests may be accepted for bug fixes.
+
+For commercial licensing or to follow the product roadmap, visit [mycelia.garden](https://mycelia.garden).
